@@ -9,7 +9,13 @@ readme = "README.md"
 python = "^3.12"
 flask = "^3.0.3"
 gunicorn = "^22.0.0"
+numpy = "1.26.2"
+opencv-python = "^4.9.0.80"
+image = "^1.5.33"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.4"
 
 [build-system]
 requires = ["poetry-core"]

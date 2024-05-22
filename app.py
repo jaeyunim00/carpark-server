@@ -1,42 +1,55 @@
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_from_directory, session
 import os
 
-# 알고리즘위한 임포트
-from algorithms import Current_maps, best_index, algo, get_shortest_path
+# 알고리즘 위한 임포트
+from bestpath import getPath
 
 app = Flask(__name__)
 
-# 업로드될 때 어디로 갈지 지정, 그냥 두개로 나눠서 지정한거임.
+# 업로드될 때 어디로 갈지 지정
 UPLOAD_FOLDER = "uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.secret_key = "supersecretkey"  # session을 사용하기 위해 필요한 secret key 설정
 
-# 이미지 핸들링해보기 예제
-latest_filename = None
+# 서버 시작 시 업로드된 파일들을 리스트로 저장
+uploaded_files = []
+
+
+def load_uploaded_files():
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    global uploaded_files
+    uploaded_files = sorted(
+        os.listdir(UPLOAD_FOLDER),
+        key=lambda x: os.path.getmtime(os.path.join(UPLOAD_FOLDER, x)),
+        reverse=True,
+    )
+
+
+load_uploaded_files()
 
 
 @app.route("/")
 def upload_form():
-    return render_template("upload.html", filename=latest_filename)
+    return render_template("upload.html", filenames=uploaded_files)
 
 
 @app.route("/upload", methods=["POST"])
 def upload_image():
-    # 이건 뭐 그냥 기본 에러차리 위한거고
     if "carpark" not in request.files:
         return "No file part", 400
-    # file 변수에 이미지 저장
     file = request.files["carpark"]
     if file.filename == "":
         return "No selected file", 400
 
-    # 여기가 중요. 파일이 있을 때 처리
     if file:
-        latest_filename = file.filename
-        # 파일 위치 설정 및
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], latest_filename)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+        print(file_path)
         file.save(file_path)
-        # 파일 이름의 길이 반환
-        return jsonify({"filename_length": len(file.filename)})
+        uploaded_files.append(file.filename)
+        temp = getPath(file.filename)
+        session["temp"] = temp  # temp 변수를 session에 저장
+        return jsonify({"최단경로": temp})
 
     return "File upload failed", 500
 
@@ -46,14 +59,12 @@ def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
-# 가장 좋은 경로 GET하기
 @app.route("/bestpath", methods=["GET"])
 def bestpath():
-    shortest_path = get_shortest_path()
-    if shortest_path == "No path found":
-        return jsonify({"message": shortest_path})
-    else:
-        return jsonify({"shortest_path": shortest_path})
+    temp = session.get("temp")  # session에서 temp 변수를 읽어옴
+    if temp is None:
+        return "No path found", 400
+    return jsonify({"shortest_path": temp})
 
 
 if __name__ == "__main__":
