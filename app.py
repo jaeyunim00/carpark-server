@@ -1,5 +1,7 @@
-from flask import Flask, request, render_template, jsonify, send_from_directory, session
+from flask import Flask, request, render_template, jsonify, send_from_directory
 import os
+import sqlite3
+import json
 
 # 알고리즘 위한 임포트
 from bestpath import getPath
@@ -9,10 +11,25 @@ app = Flask(__name__)
 # 업로드될 때 어디로 갈지 지정
 UPLOAD_FOLDER = "uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.secret_key = "supersecretkey"  # session을 사용하기 위해 필요한 secret key 설정
+
+# SQLite 데이터베이스 파일
+DATABASE = "bestpath.db"
 
 # 서버 시작 시 업로드된 파일들을 리스트로 저장
 uploaded_files = []
+
+
+def init_db():
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS paths (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            filename TEXT UNIQUE,
+                            best_path TEXT
+                          )"""
+        )
+        conn.commit()
 
 
 def load_uploaded_files():
@@ -26,6 +43,7 @@ def load_uploaded_files():
     )
 
 
+init_db()
 load_uploaded_files()
 
 
@@ -47,9 +65,21 @@ def upload_image():
         print(file_path)
         file.save(file_path)
         uploaded_files.append(file.filename)
-        temp = getPath(file.filename)
-        session["temp"] = temp  # temp 변수를 session에 저장
-        return jsonify({"최단경로": temp})
+
+        # 최단 경로 계산 및 저장
+        best_path = getPath(file.filename, 1, 0)
+        best_path_json = json.dumps(best_path)  # 리스트를 JSON 문자열로 변환
+
+        # SQLite에 저장
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO paths (filename, best_path) VALUES (?, ?)",
+                (file.filename, best_path_json),
+            )
+            conn.commit()
+
+        return jsonify({"최단경로": best_path})
 
     return "File upload failed", 500
 
@@ -61,10 +91,16 @@ def uploaded_file(filename):
 
 @app.route("/bestpath", methods=["GET"])
 def bestpath():
-    temp = session.get("temp")  # session에서 temp 변수를 읽어옴
-    if temp is None:
-        return "No path found", 400
-    return jsonify({"shortest_path": temp})
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT best_path FROM paths ORDER BY id DESC LIMIT 1")
+        result = cursor.fetchone()
+
+    if result is None:
+        return jsonify({"error": "No paths found"}), 404
+
+    best_path = json.loads(result[0])  # JSON 문자열을 파이썬 객체로 변환
+    return jsonify({"shortest_path": best_path})
 
 
 if __name__ == "__main__":
