@@ -48,12 +48,8 @@ def getPath(img_name, usual_sensor, special_sensor):
         return sel_map
 
     def calculation_distance(maps, entry):
-
         distances = []
-        # if 1 not in maps:
-        #     distances = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
 
-        # else:
         for i in range(len(maps)):
             for j in range(len(maps[0])):
                 if maps[i][j] == 1:
@@ -239,41 +235,36 @@ def getPath(img_name, usual_sensor, special_sensor):
 
     fin_map = mapping(compressed, maps)
 
-    if not any(1 in sublist for sublist in fin_map):
+    entry = (0, 12)
 
-        return -1
+    result = calculation_distance(fin_map, entry)
 
-    else:
-        entry = (0, 12)
+    best = result.pop(0)[1]
 
-        result = calculation_distance(fin_map, entry)
+    start = (13, 8)  # 고정
+    end = best
 
-        best = result.pop(0)[1]
+    li = algo(fin_map, start, end)
 
-        start = (13, 8)  # 고정
-        end = best
+    compressed_array = compress_2X2_array(fin_map)
 
-        li = algo(fin_map, start, end)
+    compressed_indices = compress_indices(li)
 
-        compressed_array = compress_2X2_array(fin_map)
+    indexing = compress_index_indices(compressed_indices)
 
-        compressed_indices = compress_indices(li)
+    load_map = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 18, 19, 20, 21, 0, 0, 9, 0],
+        [0, 17, 0, 0, 22, 0, 0, 8, 0],
+        [0, 16, 0, 0, 23, 0, 0, 7, 0],
+        [0, 15, 14, 13, 12, 11, 10, 6, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 0],
+        [0, 0, 0, 0, 1, 2, 3, 4, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
 
-        indexing = compress_index_indices(compressed_indices)
+    values = [load_map[i][j] for i, j in indexing]
 
-        load_map = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 18, 19, 20, 21, 0, 0, 9, 0],
-            [0, 17, 0, 0, 22, 0, 0, 8, 0],
-            [0, 16, 0, 0, 23, 0, 0, 7, 0],
-            [0, 15, 14, 13, 12, 11, 10, 6, 0],
-            [0, 0, 0, 0, 0, 0, 0, 5, 0],
-            [0, 0, 0, 0, 1, 2, 3, 4, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ]
+    values_slice = values[:-1]
 
-        values = [load_map[i][j] for i, j in indexing]
-
-        values_slice = values[:-1]
-
-        return values_slice
+    return values_slice
