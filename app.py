@@ -91,6 +91,19 @@ load_uploaded_files()
 def upload_form():
     return render_template("upload.html", filenames=uploaded_files)
 
+# 트리거 할 주소들
+urls = [
+    "http://172.20.170.162:8000/send_path",
+    "http://172.20.181.60:8000/send_path",
+    "http://172.20.104.41:8000/send_path",
+]
+
+url_info = [
+    [1, 2, 3, 4, 5, 6, 7],
+    [16, 17, 18, 19, 20, 21, 22, 23],
+    [8, 9, 10, 11, 12, 13, 14, 15],
+]
+
 
 @app.route("/upload", methods=["POST"])
 def upload_image():
@@ -123,7 +136,7 @@ def upload_image():
 
         if (best_path == -1):
             try:
-                response = requests.get("http://172.20.132.117:5050/full")
+                response = requests.get("http://172.20.104.41:5050/full")
                 return response.status_code, response.text
             except requests.RequestException as e:
                 return None, str(e)
@@ -139,19 +152,19 @@ def upload_image():
                 print(
                     f"Sent {value} to {"http://172.20.170.162:8000/receive_path"}, response: {response.status_code}"
                 )
-                time.sleep(0.3)
+                time.sleep(1)
             elif value in url_info[1]:
                 response = requests.post("http://172.20.181.60:8000/receive_path", json={"off_path": [value]})
                 print(
                     f"Sent {value} to {"http://172.20.181.60:8000/receive_path"}, response: {response.status_code}"
                 )
-                time.sleep(0.3)
+                time.sleep(1)
             elif value in url_info[2]:
                 response = requests.post("http://172.20.104.41:8000/receive_path", json={"off_path": [value]})
                 print(
                     f"Sent {value} to {"http://172.20.104.41:8000/receive_path"}, response: {response.status_code}"
                 )
-                time.sleep(0.3)
+                time.sleep(1)
             else:
                 return "오류"
 
